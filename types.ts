@@ -142,4 +142,4 @@ export interface UserProfile {
   lastLogin?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'FIRE' | 'EDITOR' | 'ADMIN_SETTINGS';
+export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'FIRE' | 'EDITOR' | 'ADMIN_SETTINGS' | 'PROFILE';

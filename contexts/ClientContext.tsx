@@ -16,6 +16,10 @@ interface ClientContextType {
   confirmPasswordReset: (username: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   
+  // User Self-Management
+  updateCurrentUserProfile: (data: { email: string }) => Promise<{ success: boolean; message: string }>;
+  changeCurrentUserPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+
   // Client Management
   selectClient: (id: string | null) => void;
   addClient: () => void;
@@ -200,6 +204,47 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return { success: true, message: '密碼已成功更新，請使用新密碼登入。' };
   };
 
+  // --- New Self-Service User Functions ---
+
+  const updateCurrentUserProfile = async (data: { email: string }): Promise<{ success: boolean; message: string }> => {
+    if (!currentUser) return { success: false, message: 'Not logged in' };
+    
+    const updatedUser = { ...currentUser, email: data.email };
+    
+    // Update State
+    setCurrentUser(updatedUser);
+    
+    // Update Database List
+    setAllUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+    
+    // Update Session Storage
+    localStorage.setItem('finsider_current_session', JSON.stringify(updatedUser));
+
+    return { success: true, message: '個人資料已更新 (Profile Updated)' };
+  };
+
+  const changeCurrentUserPassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    if (!currentUser) return { success: false, message: 'Not logged in' };
+    
+    // Check old password
+    if (currentUser.password !== currentPassword) {
+       return { success: false, message: '舊密碼錯誤 (Incorrect current password)' };
+    }
+
+    const updatedUser = { ...currentUser, password: newPassword };
+    
+    // Update State (password is part of session usually for re-auth, though risky in localstorage, keeping consistent with demo)
+    setCurrentUser(updatedUser);
+    
+    // Update Database List
+    setAllUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+    
+    // Update Session Storage
+    localStorage.setItem('finsider_current_session', JSON.stringify(updatedUser));
+
+    return { success: true, message: '密碼已更改 (Password Changed)' };
+  };
+
   const logout = () => {
     localStorage.removeItem('finsider_current_session');
     setCurrentUser(null);
@@ -313,6 +358,8 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       requestPasswordReset,
       confirmPasswordReset,
       logout,
+      updateCurrentUserProfile,
+      changeCurrentUserPassword,
       selectClient,
       addClient,
       updateClient,

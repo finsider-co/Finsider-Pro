@@ -12,6 +12,7 @@ import { DataEditor } from './components/DataEditor';
 import { LoginView } from './components/LoginView';
 import { FinancialFreedomView } from './components/FinancialFreedomView';
 import { AdminSettings } from './components/AdminSettings';
+import { UserProfileView } from './components/UserProfileView';
 import { useClient } from './contexts/ClientContext';
 import { ViewState } from './types';
 import { exportClientToExcel } from './services/exportService';
@@ -58,6 +59,11 @@ const App: React.FC = () => {
        return <AdminSettings onClose={() => setCurrentView('DASHBOARD')} />;
     }
 
+    // User Profile View (Global)
+    if (currentView === 'PROFILE') {
+       return <UserProfileView />;
+    }
+
     // If no client selected, show CRM
     if (!activeClient) {
       return (
@@ -66,6 +72,7 @@ const App: React.FC = () => {
           onSelectClient={(c) => handleSelectClientWrapper(c.id)}
           onAddClient={handleAddClientWrapper}
           onDeleteClient={deleteClient}
+          onOpenProfile={() => setCurrentView('PROFILE')}
         />
       );
     }
@@ -135,6 +142,18 @@ const App: React.FC = () => {
                <Users size={20} />
                {isSidebarOpen && <span className="font-medium">切換客戶</span>}
              </button>
+             {/* Profile Link in Sidebar Footer */}
+             <button 
+               onClick={() => {
+                   selectClient(null); 
+                   setCurrentView('PROFILE');
+               }}
+               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ${!isSidebarOpen && 'justify-center'} ${currentView === 'PROFILE' ? 'bg-slate-800 text-white' : ''}`}
+               title="個人資料"
+             >
+               <Settings size={20} />
+               {isSidebarOpen && <span className="font-medium">個人設定</span>}
+             </button>
              <button 
                onClick={logout}
                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors ${!isSidebarOpen && 'justify-center'}`}
@@ -164,6 +183,7 @@ const App: React.FC = () => {
                  currentView === 'PORTFOLIO' ? '投資組合 (Portfolio)' : 
                  currentView === 'FIRE' ? '財務自由 (FIRE Calculator)' :
                  currentView === 'ADMIN_SETTINGS' ? '系統管理 (Admin)' :
+                 currentView === 'PROFILE' ? '個人資料設定 (Profile)' :
                  '保單分析 (Insurance)'}
               </h2>
             </div>
@@ -186,7 +206,7 @@ const App: React.FC = () => {
           </header>
         ) : (
           <header className="h-20 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-10 shadow-lg z-10 text-white">
-             <div className="flex items-center gap-3">
+             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentView('DASHBOARD')}>
                 <Sparkles className="text-emerald-400" size={28} />
                 <span className="font-bold text-2xl tracking-tight">Finsider<span className="text-emerald-400">Pro</span></span>
              </div>
@@ -204,11 +224,20 @@ const App: React.FC = () => {
                  </button>
                )}
 
-               <div className="text-sm text-slate-400 bg-slate-800 px-4 py-1.5 rounded-full flex items-center gap-2">
+               {/* Profile Button - Now Clickable */}
+               <button 
+                 onClick={() => {
+                    selectClient(null);
+                    setCurrentView('PROFILE');
+                 }}
+                 className={`text-sm text-slate-400 bg-slate-800 px-4 py-1.5 rounded-full flex items-center gap-2 hover:bg-slate-700 transition-colors ${currentView === 'PROFILE' ? 'ring-2 ring-emerald-500 text-white' : ''}`}
+                 title="編輯個人資料"
+               >
                  <span className={`w-2 h-2 rounded-full ${currentUser.role === 'ADMIN' ? 'bg-purple-500' : 'bg-emerald-500'}`}></span>
                  {currentUser.username} <span className="text-xs opacity-50">({currentUser.role})</span>
-               </div>
-               <button onClick={logout} className="text-slate-400 hover:text-white transition-colors">
+               </button>
+
+               <button onClick={logout} className="text-slate-400 hover:text-white transition-colors" title="登出">
                  <LogOut size={20} />
                </button>
              </div>

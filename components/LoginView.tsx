@@ -301,12 +301,6 @@ export const LoginView: React.FC<Props> = () => {
                     <ArrowLeft size={14} /> 返回登入
                 </button>
               )}
-
-              {authMode !== 'RESET' && (
-                <p className="text-center text-xs text-slate-400 mt-6 bg-slate-50 p-2 rounded">
-                    預設管理員: <strong>admin</strong> / 密碼: <strong>admin123</strong>
-                </p>
-              )}
             </form>
           )}
         </div>

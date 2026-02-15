@@ -1,18 +1,21 @@
 
 import React from 'react';
 import { ClientProfile } from '../types';
-import { User, Plus, Search, Trash2, ChevronRight, Calendar, Clock, FileSpreadsheet, Cake } from 'lucide-react';
+import { User, Plus, Search, Trash2, ChevronRight, Clock, FileSpreadsheet, Cake, Settings } from 'lucide-react';
 import { exportAllClientsToExcel } from '../services/exportService';
 import { calculateAge } from '../constants';
+import { useClient } from '../contexts/ClientContext';
 
 interface Props {
   clients: ClientProfile[];
   onSelectClient: (client: ClientProfile) => void;
   onAddClient: () => void;
   onDeleteClient: (id: string) => void;
+  onOpenProfile: () => void;
 }
 
-export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClient, onDeleteClient }) => {
+export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClient, onDeleteClient, onOpenProfile }) => {
+  const { currentUser } = useClient();
   const [searchTerm, setSearchTerm] = React.useState('');
 
   const filteredClients = clients.filter(c => 
@@ -24,15 +27,9 @@ export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClie
     if(!dob) return false;
     const today = new Date();
     const birthDate = new Date(dob);
-    // Check if birthday is within next 7 days
-    // Simplified logic: set birthdate to current year and compare
     const currentYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-    
-    // Handle if birthday has passed this year, check next year (not strictly needed for "soon" unless end of year)
-    // Just check difference in time
     const diffTime = currentYearBirthday.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
     return diffDays >= 0 && diffDays <= 7;
   };
 
@@ -40,15 +37,23 @@ export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClie
     <div className="max-w-7xl mx-auto animate-fade-in p-8">
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">客戶資料庫 (Client Database)</h2>
-          <p className="text-slate-500 mt-2 text-lg">管理您的客戶關係及投資組合</p>
+          <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+            Welcome back, <span className="text-emerald-600">{currentUser?.username}</span>
+          </h2>
+          <p className="text-slate-500 mt-2 text-lg">客戶資料庫與理財規劃中心</p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={onOpenProfile}
+            className="flex items-center gap-2 bg-white text-slate-700 border border-slate-300 px-5 py-3 rounded-xl hover:bg-slate-50 transition-all font-bold shadow-sm"
+          >
+            <Settings size={20} /> 個人設定
+          </button>
           <button 
             onClick={() => exportAllClientsToExcel(clients)}
             className="flex items-center gap-2 bg-white text-emerald-700 border border-emerald-200 px-5 py-3 rounded-xl hover:bg-emerald-50 transition-all font-bold shadow-sm"
           >
-            <FileSpreadsheet size={20} /> 匯出 Excel (XLSX)
+            <FileSpreadsheet size={20} /> 匯出 Excel
           </button>
           <button 
             onClick={onAddClient}

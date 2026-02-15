@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ClientProfile, InvestmentHolding } from '../types';
 import { MOCK_CLIENT } from '../constants';
@@ -74,14 +75,35 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const addClient = () => {
+    // Generate sequential ID logic
+    // Extract numbers from IDs like "C-001", "c-001", "C-102"
+    const existingIds = clients.map(c => {
+      const match = c.id.match(/(\d+)/);
+      return match ? parseInt(match[0], 10) : 0;
+    });
+
+    let nextIdNum = 1;
+    if (existingIds.length > 0) {
+      // Find the max ID. Filter out suspiciously large numbers (timestamps) if any exist from legacy versions,
+      // assuming standard sequential IDs are < 1,000,000.
+      const validSequenceIds = existingIds.filter(n => n < 1000000);
+      const maxId = validSequenceIds.length > 0 ? Math.max(...validSequenceIds) : Math.max(...existingIds);
+      nextIdNum = maxId + 1;
+    }
+
+    // Format new ID as C-XXX (e.g., C-002)
+    const newId = `C-${String(nextIdNum).padStart(3, '0')}`;
+
     const newClient: ClientProfile = {
       ...MOCK_CLIENT,
-      id: `c-${Date.now()}`,
+      id: newId,
       name: '新客戶 (New Client)',
       email: '',
       phone: '',
       notes: '',
       lastUpdated: new Date().toISOString(),
+      lastMeetingDate: new Date().toISOString().split('T')[0], // Default to Today
+      dateOfBirth: '1990-01-01', // Default DOB
       assets: [],
       liabilities: [],
       cashFlow: [],

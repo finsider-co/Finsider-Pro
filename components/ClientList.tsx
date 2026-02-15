@@ -1,6 +1,9 @@
+
 import React from 'react';
 import { ClientProfile } from '../types';
-import { User, Plus, Search, Trash2, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { User, Plus, Search, Trash2, ChevronRight, Calendar, Clock, FileSpreadsheet, Cake } from 'lucide-react';
+import { exportAllClientsToExcel } from '../services/exportService';
+import { calculateAge } from '../constants';
 
 interface Props {
   clients: ClientProfile[];
@@ -17,6 +20,22 @@ export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClie
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const isBirthdaySoon = (dob: string) => {
+    if(!dob) return false;
+    const today = new Date();
+    const birthDate = new Date(dob);
+    // Check if birthday is within next 7 days
+    // Simplified logic: set birthdate to current year and compare
+    const currentYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+    
+    // Handle if birthday has passed this year, check next year (not strictly needed for "soon" unless end of year)
+    // Just check difference in time
+    const diffTime = currentYearBirthday.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    return diffDays >= 0 && diffDays <= 7;
+  };
+
   return (
     <div className="max-w-7xl mx-auto animate-fade-in p-8">
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
@@ -24,12 +43,20 @@ export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClie
           <h2 className="text-3xl font-bold text-slate-900">客戶資料庫 (Client Database)</h2>
           <p className="text-slate-500 mt-2 text-lg">管理您的客戶關係及投資組合</p>
         </div>
-        <button 
-          onClick={onAddClient}
-          className="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 font-bold"
-        >
-          <Plus size={20} /> 新增客戶
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => exportAllClientsToExcel(clients)}
+            className="flex items-center gap-2 bg-white text-emerald-700 border border-emerald-200 px-5 py-3 rounded-xl hover:bg-emerald-50 transition-all font-bold shadow-sm"
+          >
+            <FileSpreadsheet size={20} /> 匯出 Excel (XLSX)
+          </button>
+          <button 
+            onClick={onAddClient}
+            className="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 font-bold"
+          >
+            <Plus size={20} /> 新增客戶
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-8">
@@ -47,18 +74,27 @@ export const ClientList: React.FC<Props> = ({ clients, onSelectClient, onAddClie
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredClients.map(client => {
+          const age = calculateAge(client.dateOfBirth);
+          const birthdayAlert = isBirthdaySoon(client.dateOfBirth);
+
           return (
             <div 
               key={client.id} 
-              className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col"
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col relative"
             >
+              {birthdayAlert && (
+                 <div className="absolute top-4 right-4 animate-bounce bg-pink-100 text-pink-600 p-2 rounded-full shadow-sm" title="近期生日">
+                    <Cake size={20} />
+                 </div>
+              )}
+
               <div className="p-8 cursor-pointer flex-1" onClick={() => onSelectClient(client)}>
                 <div className="flex items-start justify-between mb-6">
                   <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xl group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
                     {client.name.split(' ').map(n => n[0]).join('').substring(0,2)}
                   </div>
                   <div className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 uppercase tracking-wide">
-                    年齡: {client.age}
+                    年齡: {age}
                   </div>
                 </div>
                 

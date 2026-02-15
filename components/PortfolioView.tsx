@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ClientProfile, AssetType } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -28,27 +29,43 @@ export const PortfolioView: React.FC<Props> = ({ data }) => {
     }
   };
 
-  // --- 1. Top Level Asset Breakdown ---
-  const investmentAssets = data.assets.filter(a => 
+  // --- 1. Top Level Asset Breakdown (Combined Portfolio + Manual Investment Assets) ---
+  
+  // A. Manual Assets (Equity, Fixed Income, Alternative)
+  const manualInvestmentAssets = data.assets.filter(a => 
     a.type === AssetType.EQUITY || a.type === AssetType.FIXED_INCOME || a.type === AssetType.ALTERNATIVE
   );
 
-  const breakdownData = investmentAssets.map(a => ({
-    name: a.name,
-    value: a.value,
-    type: a.type
+  // B. Portfolio Assets (Mapped to Asset-like structure, defaulting to EQUITY for simplicity)
+  // Note: Ideally we map sectors to types, but for now we assume Portfolio = Equity/Stocks
+  const portfolioAssets = data.portfolio.map(p => ({
+    name: `${p.name} (${p.ticker})`,
+    value: p.shares * p.currentPrice,
+    type: AssetType.EQUITY
   }));
+
+  const allInvestmentAssets = [...manualInvestmentAssets, ...portfolioAssets];
+
+  // Breakdown Data for List (Sorted by Value)
+  const breakdownData = allInvestmentAssets
+    .sort((a, b) => b.value - a.value)
+    .map(a => ({
+      name: a.name,
+      value: a.value,
+      type: a.type
+    }));
   
   const totalInvestmentValue = breakdownData.reduce((acc, curr) => acc + curr.value, 0);
 
+  // Aggregation for Pie Chart (by Asset Type)
   const typeMap = new Map<string, number>();
-  investmentAssets.forEach(a => {
+  allInvestmentAssets.forEach(a => {
     typeMap.set(a.type, (typeMap.get(a.type) || 0) + a.value);
   });
   const typeChartData = Array.from(typeMap).map(([name, value]) => ({ name, value }));
 
 
-  // --- 2. Detailed Holdings ---
+  // --- 2. Detailed Holdings (Portfolio Only) ---
   const holdingsData = data.portfolio.map(p => ({
     ...p,
     amount: p.currentPrice * p.shares
@@ -78,7 +95,7 @@ export const PortfolioView: React.FC<Props> = ({ data }) => {
               <h3 className="text-xl font-bold text-slate-800 mb-1 flex items-center gap-2">
                  <Briefcase className="text-emerald-500" /> 主要投資資產分佈
               </h3>
-              <p className="text-slate-500 text-sm">股票、債券及另類投資 (來自資產負債表)</p>
+              <p className="text-slate-500 text-sm">股票、債券及另類投資 (包括投資組合持倉)</p>
            </div>
            
            <div className="flex flex-col md:flex-row items-center mt-6 gap-8">
@@ -113,14 +130,14 @@ export const PortfolioView: React.FC<Props> = ({ data }) => {
                 </div>
               </div>
 
-              <div className="flex-1 w-full space-y-4">
+              <div className="flex-1 w-full space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                  {breakdownData.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center border-b border-slate-50 pb-2 last:border-0">
-                       <div>
-                          <p className="font-bold text-slate-800">{item.name}</p>
+                       <div className="overflow-hidden">
+                          <p className="font-bold text-slate-800 truncate">{item.name}</p>
                           <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-500">{item.type}</span>
                        </div>
-                       <div className="text-right">
+                       <div className="text-right shrink-0">
                           <p className="font-mono font-medium text-slate-700">${item.value.toLocaleString()}</p>
                           <p className="text-xs text-emerald-500 font-bold">
                              {((item.value / totalInvestmentValue) * 100).toFixed(1)}%

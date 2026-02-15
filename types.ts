@@ -1,3 +1,4 @@
+
 export enum AssetType {
   CASH = '現金及等價物',
   EQUITY = '股票',
@@ -38,11 +39,20 @@ export interface CashFlowItem {
   isIncome: boolean;
 }
 
-export type InsuranceType = 'Life' | 'Health' | 'Critical Illness' | 'Disability' | 'Savings' | 'Annuity';
+// Changed 'Health' to 'Medical'
+export type InsuranceType = 'Life' | 'Medical' | 'Critical Illness' | 'Disability' | 'Savings' | 'Annuity';
 export type PolicyNature = 'Savings' | 'Consumption';
+
+export interface InsuranceRider {
+  id: string;
+  name: string; // 附約名稱
+  coverageAmount: number; // 附約保額
+  premium: number; // 附約保費
+}
 
 export interface InsurancePolicy {
   id: string;
+  name: string; // Plan Name (計劃名稱)
   provider: string;
   type: InsuranceType;
   nature: PolicyNature;
@@ -50,9 +60,28 @@ export interface InsurancePolicy {
   premium: number;
   premiumFrequency: 'Monthly' | 'Annually';
   beneficiary: string;
-  totalPremiumsPaid?: number; // New field
-  policyNotes?: string; // New field
+  totalPremiumsPaid?: number;
+  policyNotes?: string;
   expiryDate?: string;
+  riders?: InsuranceRider[]; // New: List of riders
+}
+
+// New Interface for detailed Medical Plan Analysis
+export interface MedicalPlanDetails {
+  id: string;
+  name: string; // e.g., "Company Group Medical", "VHIS Flexi"
+  type: 'Group' | 'Personal';
+  deductible: number; // 自付費
+  roomType: 'Ward' | 'Semi-Private' | 'Private';
+  // Benefit Limits (Simplified for analysis)
+  limitRoomAndBoard: number; // Daily limit
+  limitSurgical: number; // Per disability limit
+  limitAnaesthetist: number;
+  limitOperatingTheatre: number;
+  limitMiscServices: number; // Hospital services
+  limitSpecialist: number; // Doctor visits
+  overallAnnualLimit: number; // Full cover pool limit if applicable (0 if itemized only)
+  fullCover?: boolean; // If true, ignore sub-limits up to annual limit (simplified)
 }
 
 export interface InvestmentHolding {
@@ -62,8 +91,8 @@ export interface InvestmentHolding {
   shares: number;
   avgPrice: number;
   currentPrice: number;
-  lastPriceCheck?: string; // New field for update timestamp
-  allocation: number; // percentage
+  lastPriceCheck?: string;
+  allocation: number;
   sector: string;
 }
 
@@ -73,15 +102,16 @@ export interface ClientProfile {
   email?: string;
   phone?: string;
   notes?: string;
-  lastMeetingDate?: string; // New field
+  lastMeetingDate?: string;
   lastUpdated?: string;
-  age: number;
+  dateOfBirth: string;
   retirementAge: number;
   assets: Asset[];
   liabilities: Liability[];
   cashFlow: CashFlowItem[];
   insurance: InsurancePolicy[];
   portfolio: InvestmentHolding[];
+  medicalPlans: MedicalPlanDetails[]; // New field
 }
 
-export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'EDITOR';
+export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'FIRE' | 'EDITOR';

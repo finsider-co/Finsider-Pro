@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { LayoutDashboard, PieChart, Wallet, Shield, LineChart, Sparkles, Menu, Users, Edit3, LogOut, Download } from 'lucide-react';
+import { LayoutDashboard, PieChart, Wallet, Shield, LineChart, Sparkles, Menu, Users, Edit3, LogOut, Download, Flame } from 'lucide-react';
 import { DashboardView } from './components/DashboardView';
 import { CashFlowView } from './components/CashFlowView';
 import { BalanceSheetView } from './components/BalanceSheetView';
@@ -9,9 +10,10 @@ import { AIAdvisor } from './components/AIAdvisor';
 import { ClientList } from './components/ClientList';
 import { DataEditor } from './components/DataEditor';
 import { LoginView } from './components/LoginView';
+import { FinancialFreedomView } from './components/FinancialFreedomView';
 import { useClient } from './contexts/ClientContext';
 import { ViewState } from './types';
-import { exportClientToCSV } from './services/exportService';
+import { exportClientToExcel } from './services/exportService';
 
 const App: React.FC = () => {
   const { 
@@ -44,7 +46,7 @@ const App: React.FC = () => {
 
   const handleExport = () => {
     if (activeClient) {
-      exportClientToCSV(activeClient);
+      exportClientToExcel(activeClient);
     }
   };
 
@@ -70,6 +72,7 @@ const App: React.FC = () => {
       case 'EDITOR': return <DataEditor client={activeClient} onSave={(c) => { updateClient(c); alert('已成功儲存！'); }} />;
       case 'PORTFOLIO': return <PortfolioView data={activeClient} />;
       case 'INSURANCE': return <InsuranceAnalysisView data={activeClient} />;
+      case 'FIRE': return <FinancialFreedomView data={activeClient} />;
       default: return <DashboardView data={activeClient} />;
     }
   };
@@ -114,6 +117,7 @@ const App: React.FC = () => {
             <NavItem icon={<LineChart size={20} />} label="資產負債" isActive={currentView === 'NETWORTH'} isOpen={isSidebarOpen} onClick={() => setCurrentView('NETWORTH')} />
             <NavItem icon={<PieChart size={20} />} label="投資組合" isActive={currentView === 'PORTFOLIO'} isOpen={isSidebarOpen} onClick={() => setCurrentView('PORTFOLIO')} />
             <NavItem icon={<Shield size={20} />} label="保單分析" isActive={currentView === 'INSURANCE'} isOpen={isSidebarOpen} onClick={() => setCurrentView('INSURANCE')} />
+            <NavItem icon={<Flame size={20} />} label="財務自由 (FIRE)" isActive={currentView === 'FIRE'} isOpen={isSidebarOpen} onClick={() => setCurrentView('FIRE')} />
           </nav>
 
           <div className="p-4 border-t border-slate-800 bg-slate-950 space-y-2">
@@ -151,7 +155,9 @@ const App: React.FC = () => {
                  currentView === 'EDITOR' ? '資料編輯 (Editor)' : 
                  currentView === 'CASHFLOW' ? '現金流分析 (Cash Flow)' :
                  currentView === 'NETWORTH' ? '資產負債表 (Balance Sheet)' :
-                 currentView === 'PORTFOLIO' ? '投資組合 (Portfolio)' : '保單分析 (Insurance)'}
+                 currentView === 'PORTFOLIO' ? '投資組合 (Portfolio)' : 
+                 currentView === 'FIRE' ? '財務自由 (FIRE Calculator)' :
+                 '保單分析 (Insurance)'}
               </h2>
             </div>
             <div className="flex items-center gap-3">
@@ -160,7 +166,7 @@ const App: React.FC = () => {
                 className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-200 hover:text-slate-800 transition-colors border border-slate-200"
               >
                 <Download size={18} />
-                Export Report
+                匯出 Excel (XLSX)
               </button>
               <button 
                 onClick={() => setIsAdvisorOpen(true)}

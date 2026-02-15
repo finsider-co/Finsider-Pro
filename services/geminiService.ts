@@ -54,38 +54,37 @@ export const updatePortfolioPrices = async (holdings: InvestmentHolding[]): Prom
   if (!apiKey || holdings.length === 0) return holdings;
 
   const tickers = holdings.map(h => h.ticker).join(', ');
+  
+  // Enhanced prompt to ensure tool usage and strictly JSON output
   const prompt = `
-    Find the latest market price (current price) for the following stock tickers: ${tickers}.
-    If a ticker is from Hong Kong (e.g., 0700.HK), ensure the price is in HKD.
-    If a ticker is US (e.g., AAPL), ensure the price is in USD (but do not convert currencies, just give the raw number).
+    You are a financial data assistant.
+    Task: Use the 'googleSearch' tool to find the LATEST REAL-TIME market price for these stock tickers: ${tickers}.
     
-    Return ONLY a JSON array of objects with 'ticker' and 'price' (number).
-    Example: [{"ticker": "AAPL", "price": 150.5}, {"ticker": "0700.HK", "price": 320.2}]
+    Rules:
+    1. You MUST use Google Search to get the current price. Do not use training data.
+    2. For Hong Kong stocks (e.g., 0700.HK), price is in HKD.
+    3. For US stocks (e.g., AAPL), price is in USD.
+    4. Return ONLY a pure JSON array. No markdown formatting (no \`\`\`json), no conversation.
+    
+    Output Format:
+    [{"ticker": "AAPL", "price": 150.5}, {"ticker": "0700.HK", "price": 320.2}]
   `;
 
   try {
-    // We use gemini-3-pro-preview (or standard) with googleSearch enabled to get real-time info
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', // Using Pro for better tool use/reasoning
+      model: 'gemini-3-pro-preview', // Pro model is better for tool use
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
+        tools: [{ googleSearch: {} }], // Enable Search
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              ticker: { type: Type.STRING },
-              price: { type: Type.NUMBER }
-            }
-          }
-        }
       }
     });
 
-    const pricesText = response.text;
+    let pricesText = response.text;
     if (!pricesText) return holdings;
+
+    // Robust Parsing: Remove markdown code blocks if present
+    pricesText = pricesText.replace(/```json/g, '').replace(/```/g, '').trim();
 
     const priceData = JSON.parse(pricesText) as { ticker: string, price: number }[];
     const priceMap = new Map(priceData.map(p => [p.ticker.toUpperCase(), p.price]));

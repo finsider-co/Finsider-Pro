@@ -114,4 +114,19 @@ export interface ClientProfile {
   medicalPlans: MedicalPlanDetails[]; // New field
 }
 
-export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'FIRE' | 'EDITOR';
+// --- Auth & Admin Types ---
+export type UserRole = 'ADMIN' | 'ADVISOR';
+export type UserStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  email?: string; // Add email for recovery
+  password: string; // In a real app, this would be hashed. Stored as plain text for this frontend demo.
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'FIRE' | 'EDITOR' | 'ADMIN_SETTINGS';

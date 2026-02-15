@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LayoutDashboard, PieChart, Wallet, Shield, LineChart, Sparkles, Menu, Users, Edit3, LogOut, Download, Flame } from 'lucide-react';
+import { LayoutDashboard, PieChart, Wallet, Shield, LineChart, Sparkles, Menu, Users, Edit3, LogOut, Download, Flame, Settings } from 'lucide-react';
 import { DashboardView } from './components/DashboardView';
 import { CashFlowView } from './components/CashFlowView';
 import { BalanceSheetView } from './components/BalanceSheetView';
@@ -11,6 +11,7 @@ import { ClientList } from './components/ClientList';
 import { DataEditor } from './components/DataEditor';
 import { LoginView } from './components/LoginView';
 import { FinancialFreedomView } from './components/FinancialFreedomView';
+import { AdminSettings } from './components/AdminSettings';
 import { useClient } from './contexts/ClientContext';
 import { ViewState } from './types';
 import { exportClientToExcel } from './services/exportService';
@@ -20,7 +21,7 @@ const App: React.FC = () => {
     currentUser, 
     activeClient, 
     clients, 
-    login, 
+    login, // kept for interface compatibility if needed, but LoginView uses context directly
     logout, 
     selectClient, 
     addClient, 
@@ -52,6 +53,11 @@ const App: React.FC = () => {
 
   // Render Logic
   const renderContent = () => {
+    // Admin Settings View (Global) - Now passes a handler to go back
+    if (currentView === 'ADMIN_SETTINGS') {
+       return <AdminSettings onClose={() => setCurrentView('DASHBOARD')} />;
+    }
+
     // If no client selected, show CRM
     if (!activeClient) {
       return (
@@ -78,13 +84,13 @@ const App: React.FC = () => {
   };
 
   if (!currentUser) {
-    return <LoginView onLogin={login} />;
+    return <LoginView onLogin={() => {}} />;
   }
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden font-sans text-slate-900">
-      {/* Sidebar - Only visible if a client is selected */}
-      {activeClient && (
+      {/* Sidebar - Only visible if a client is selected OR if managing settings */}
+      {(activeClient) && (
         <aside className={`
           ${isSidebarOpen ? 'w-64' : 'w-24'} 
           bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 ease-in-out shadow-2xl z-20
@@ -143,7 +149,7 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[#f8fafc]">
-        {/* Header - Only for client view */}
+        {/* Header */}
         {activeClient ? (
           <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-6">
@@ -157,6 +163,7 @@ const App: React.FC = () => {
                  currentView === 'NETWORTH' ? '資產負債表 (Balance Sheet)' :
                  currentView === 'PORTFOLIO' ? '投資組合 (Portfolio)' : 
                  currentView === 'FIRE' ? '財務自由 (FIRE Calculator)' :
+                 currentView === 'ADMIN_SETTINGS' ? '系統管理 (Admin)' :
                  '保單分析 (Insurance)'}
               </h2>
             </div>
@@ -184,9 +191,22 @@ const App: React.FC = () => {
                 <span className="font-bold text-2xl tracking-tight">Finsider<span className="text-emerald-400">Pro</span></span>
              </div>
              <div className="flex items-center gap-4">
+               {/* Admin Link (Only for Admins) */}
+               {currentUser.role === 'ADMIN' && (
+                 <button 
+                    onClick={() => {
+                       selectClient(null); // Ensure no client is active
+                       setCurrentView('ADMIN_SETTINGS');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-bold text-sm ${currentView === 'ADMIN_SETTINGS' ? 'bg-emerald-500 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+                 >
+                    <Settings size={18} /> 管理後台
+                 </button>
+               )}
+
                <div className="text-sm text-slate-400 bg-slate-800 px-4 py-1.5 rounded-full flex items-center gap-2">
-                 <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                 {currentUser}
+                 <span className={`w-2 h-2 rounded-full ${currentUser.role === 'ADMIN' ? 'bg-purple-500' : 'bg-emerald-500'}`}></span>
+                 {currentUser.username} <span className="text-xs opacity-50">({currentUser.role})</span>
                </div>
                <button onClick={logout} className="text-slate-400 hover:text-white transition-colors">
                  <LogOut size={20} />

@@ -59,6 +59,7 @@ export interface InsurancePolicy {
   coverageAmount: number;
   premium: number;
   premiumFrequency: 'Monthly' | 'Annually';
+  surrenderValue?: number; // New: 退保價值 / 現金價值
   beneficiary: string;
   totalPremiumsPaid?: number;
   policyNotes?: string;
@@ -96,6 +97,17 @@ export interface InvestmentHolding {
   sector: string;
 }
 
+// New Interface for Life Insurance Needs Approach
+export interface FinancialNeeds {
+  funeralCost: number; // 殮葬及後事費用
+  mortgageRedemption: number; // 償還按揭餘額
+  loansRedemption: number; // 償還其他債務
+  childEducationFund: number; // 子女教育基金
+  monthlyFamilySupport: number; // 每月家庭生活費 (不含死者)
+  supportYears: number; // 需要供養年期
+  emergencyFund: number; // 緊急預備金 (額外)
+}
+
 export interface ClientProfile {
   id: string;
   name: string;
@@ -111,7 +123,8 @@ export interface ClientProfile {
   cashFlow: CashFlowItem[];
   insurance: InsurancePolicy[];
   portfolio: InvestmentHolding[];
-  medicalPlans: MedicalPlanDetails[]; // New field
+  medicalPlans: MedicalPlanDetails[];
+  financialNeeds?: FinancialNeeds; // Optional to support existing data
 }
 
 // --- Auth & Admin Types ---

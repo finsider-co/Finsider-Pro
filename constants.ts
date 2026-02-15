@@ -132,6 +132,15 @@ export const MOCK_CLIENT: ClientProfile = {
   lastUpdated: new Date().toISOString(),
   dateOfBirth: '1982-05-15', // Approx 42 years old
   retirementAge: 60,
+  financialNeeds: {
+    funeralCost: 300000,
+    mortgageRedemption: 8500000,
+    loansRedemption: 450000,
+    childEducationFund: 2000000,
+    monthlyFamilySupport: 40000,
+    supportYears: 20,
+    emergencyFund: 500000
+  },
   assets: [
     { id: 'a1', name: '自住物業 (九龍塘)', type: AssetType.REAL_ESTATE, value: 15000000, currency: 'HKD' },
     { id: 'a2', name: '高息活期存款', type: AssetType.CASH, value: 2500000, currency: 'HKD' },
@@ -164,6 +173,7 @@ export const MOCK_CLIENT: ClientProfile = {
       coverageAmount: 5000000, 
       premium: 2500, 
       premiumFrequency: 'Monthly', 
+      surrenderValue: 50000,
       beneficiary: '配偶', 
       totalPremiumsPaid: 150000, 
       policyNotes: '人壽主約',
@@ -172,9 +182,9 @@ export const MOCK_CLIENT: ClientProfile = {
         { id: 'r2', name: '意外受傷附加保障', coverageAmount: 500000, premium: 200 }
       ]
     },
-    { id: 'ins2', name: 'CEO 高端醫療計劃', provider: '友邦 (AIA)', type: 'Medical', nature: 'Consumption', coverageAmount: 0, premium: 1500, premiumFrequency: 'Monthly', beneficiary: '家庭', totalPremiumsPaid: 80000, policyNotes: '全家醫療計劃' },
-    { id: 'ins3', name: '活耀人生危疾保', provider: '宏利 (Manulife)', type: 'Critical Illness', nature: 'Savings', coverageAmount: 2000000, premium: 3000, premiumFrequency: 'Monthly', beneficiary: '本人', totalPremiumsPaid: 360000, policyNotes: '早期危疾保障' },
-    { id: 'ins4', name: '真智珍寶儲蓄', provider: '安盛 (AXA)', type: 'Savings', nature: 'Savings', coverageAmount: 1000000, premium: 2000, premiumFrequency: 'Monthly', beneficiary: '子女', totalPremiumsPaid: 120000, policyNotes: '教育基金' },
+    { id: 'ins2', name: 'CEO 高端醫療計劃', provider: '友邦 (AIA)', type: 'Medical', nature: 'Consumption', coverageAmount: 0, premium: 1500, premiumFrequency: 'Monthly', surrenderValue: 0, beneficiary: '家庭', totalPremiumsPaid: 80000, policyNotes: '全家醫療計劃' },
+    { id: 'ins3', name: '活耀人生危疾保', provider: '宏利 (Manulife)', type: 'Critical Illness', nature: 'Savings', coverageAmount: 2000000, premium: 3000, premiumFrequency: 'Monthly', surrenderValue: 120000, beneficiary: '本人', totalPremiumsPaid: 360000, policyNotes: '早期危疾保障' },
+    { id: 'ins4', name: '真智珍寶儲蓄', provider: '安盛 (AXA)', type: 'Savings', nature: 'Savings', coverageAmount: 1000000, premium: 2000, premiumFrequency: 'Monthly', surrenderValue: 135000, beneficiary: '子女', totalPremiumsPaid: 120000, policyNotes: '教育基金' },
   ],
   portfolio: [
     { id: 'p1', ticker: 'AAPL', name: 'Apple Inc.', shares: 500, avgPrice: 150, currentPrice: 185, allocation: 25, sector: 'Information Technology' },

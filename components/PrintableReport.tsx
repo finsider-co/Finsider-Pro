@@ -69,34 +69,86 @@ export const PrintableReport: React.FC<Props> = ({ client }) => {
      return Math.min((current / target) * 100, 100);
   };
 
+  // --- Components ---
+
+  const ReportHeader = ({ title, subtitle }: { title?: string, subtitle?: string }) => (
+    <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-6">
+      <div className="flex items-center gap-4">
+        <div className="bg-slate-900 text-white p-2.5 rounded-xl shadow-lg">
+            <Sparkles size={24} className="text-emerald-400" />
+        </div>
+        <div>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">{client.name}</h1>
+            <p className="text-emerald-600 font-bold text-xs mt-1 uppercase tracking-wider">
+               {title || '財富管理分析報告 (Wealth Analysis)'}
+            </p>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="flex flex-col items-end gap-1">
+           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client Profile</span>
+           <div className="flex gap-3 text-[10px] font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+              <span><span className="text-slate-400">Age:</span> {age}</span>
+              {/* Retirement Removed */}
+              <span className="border-l border-slate-300 pl-3"><span className="text-slate-400">Date:</span> {new Date().toLocaleDateString()}</span>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ReportFooter = ({ page, total }: { page: number, total: number }) => (
+    <div className="absolute bottom-0 left-0 right-0 pb-4 pt-4 mx-8 border-t border-slate-100 text-[9px] text-slate-400 text-center bg-white">
+         <p>FinsiderPro Wealth Report | Page {page} of {total}</p>
+    </div>
+  );
+
   return (
-    <div className="w-full bg-white text-slate-900 font-sans p-8 h-auto block">
+    <div className="w-full font-sans text-slate-900">
+      <style>{`
+        .print-page {
+          width: 210mm;
+          min-height: 297mm;
+          background: white;
+          margin-bottom: 2rem;
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          padding: 2rem;
+          box-sizing: border-box;
+        }
+        
+        /* PDF Generation Mode - Strict A4 Sizing */
+        .pdf-mode .print-page {
+          margin-bottom: 0 !important;
+          box-shadow: none !important;
+          height: 296mm !important; /* Slightly less than 297mm to prevent overflow */
+          min-height: 296mm !important;
+          overflow: hidden !important;
+          page-break-after: always;
+          border: none !important;
+        }
+        .pdf-mode .print-page:last-child {
+          page-break-after: auto;
+        }
+
+        @media print {
+          .print-page {
+            margin-bottom: 0 !important;
+            box-shadow: none !important;
+            height: 297mm !important;
+            page-break-after: always;
+          }
+          .print-page:last-child {
+            page-break-after: auto;
+          }
+        }
+      `}</style>
       
       {/* --- PAGE 1 START --- */}
-      <div className="flex flex-col relative h-[280mm]">
-
-        {/* 1. HEADER SECTION */}
-        <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-6 avoid-break">
-          <div className="flex items-center gap-4">
-            <div className="bg-slate-900 text-white p-2.5 rounded-xl shadow-lg">
-                <Sparkles size={24} className="text-emerald-400" />
-            </div>
-            <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">{client.name}</h1>
-                <p className="text-emerald-600 font-bold text-xs mt-1 uppercase tracking-wider">財富管理分析報告 (Wealth Analysis)</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="flex flex-col items-end gap-1">
-               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client Profile</span>
-               <div className="flex gap-3 text-[10px] font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                  <span><span className="text-slate-400">Age:</span> {age}</span>
-                  <span className="border-l border-slate-300 pl-3"><span className="text-slate-400">Retirement:</span> {client.retirementAge}</span>
-                  <span className="border-l border-slate-300 pl-3"><span className="text-slate-400">Date:</span> {new Date().toLocaleDateString()}</span>
-               </div>
-            </div>
-          </div>
-        </div>
+      <div className="print-page">
+        <ReportHeader />
 
         {/* 2. EXECUTIVE SUMMARY CARDS */}
         <div className="grid grid-cols-4 gap-4 mb-6 avoid-break">
@@ -220,7 +272,7 @@ export const PrintableReport: React.FC<Props> = ({ client }) => {
         </div>
 
         {/* 4. THREE COLUMN DETAILS GRID */}
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-6 flex-1">
             
             {/* COLUMN 1: INCOME & EXPENSE + HEALTH METRICS */}
             <div className="col-span-1">
@@ -279,7 +331,7 @@ export const PrintableReport: React.FC<Props> = ({ client }) => {
                     </h3>
                     
                     {/* Top Portfolio Items */}
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">股票/基金持倉</h4>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">股票/基金持倉 (Top 3)</h4>
                     <table className="w-full text-xs mb-3">
                       <tbody>
                         {client.portfolio.sort((a,b) => (b.shares * b.currentPrice) - (a.shares * a.currentPrice)).slice(0, 3).map((p, i) => (
@@ -291,10 +343,10 @@ export const PrintableReport: React.FC<Props> = ({ client }) => {
                       </tbody>
                     </table>
 
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2 border-t border-slate-50 pt-2">主要資產</h4>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2 border-t border-slate-50 pt-2">主要資產 (Top 3)</h4>
                     <table className="w-full text-xs mb-3">
                       <tbody>
-                        {client.assets.slice(0, 3).map((a, i) => (
+                        {client.assets.sort((a,b) => b.value - a.value).slice(0, 3).map((a, i) => (
                            <tr key={`a-${i}`} className="border-b border-slate-50">
                               <td className="py-1.5 text-slate-600 truncate max-w-[80px] text-[10px]">{a.name}</td>
                               <td className="py-1.5 text-right font-bold text-slate-800 text-[10px]">${a.value.toLocaleString()}</td>
@@ -303,10 +355,10 @@ export const PrintableReport: React.FC<Props> = ({ client }) => {
                       </tbody>
                     </table>
 
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2 border-t border-slate-50 pt-2">主要負債</h4>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2 border-t border-slate-50 pt-2">主要負債 (Top 3)</h4>
                     <table className="w-full text-xs">
                        <tbody>
-                          {client.liabilities.slice(0, 3).map((l, i) => (
+                          {client.liabilities.sort((a,b) => b.amount - a.amount).slice(0, 3).map((l, i) => (
                              <tr key={i} className="border-b border-slate-50">
                                 <td className="py-1.5 text-slate-600 truncate max-w-[80px] text-[10px]">{l.name}</td>
                                 <td className="py-1.5 text-right font-bold text-red-600 text-[10px]">${l.amount.toLocaleString()}</td>
@@ -371,103 +423,85 @@ export const PrintableReport: React.FC<Props> = ({ client }) => {
 
         </div>
 
-        {/* FOOTER PAGE 1 */}
-        <div className="absolute bottom-0 left-0 right-0 pt-4 border-t border-slate-100 text-[9px] text-slate-400 text-center">
-             <p>FinsiderPro Wealth Report | Page 1 of 2</p>
-        </div>
+        <ReportFooter page={1} total={2} />
       </div>
       
-      {/* PAGE BREAK */}
-      <div className="page-break"></div>
-
       {/* --- PAGE 2 START --- */}
-      <div className="min-h-[290mm] flex flex-col relative pt-8">
+      <div className="print-page">
+          <ReportHeader title="現有保單詳情 (Policy Details)" />
           
-          {/* HEADER PAGE 2 */}
-          <div className="flex items-center gap-3 mb-6 border-b-2 border-slate-900 pb-4">
-             <div className="p-2 bg-emerald-50 rounded-lg">
-                <Shield size={24} className="text-emerald-600" />
-             </div>
-             <div>
-                <h2 className="text-2xl font-bold text-slate-900">現有保單詳情</h2>
-                <p className="text-xs text-slate-500 font-bold mt-1">詳列所有持有的保險計劃及其保障範圍</p>
-             </div>
-          </div>
-
-          {/* POLICY GRID - COMPACT & OPTIMIZED */}
-          <div className="grid grid-cols-2 gap-4 mb-auto content-start">
-             {client.insurance.map((pol, i) => (
-                <div key={i} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm avoid-break flex flex-col hover:border-emerald-300 transition-colors">
-                   {/* Card Header */}
-                   <div className="flex justify-between items-start mb-2 pb-2 border-b border-slate-50">
-                      <div className="overflow-hidden pr-2">
-                         <div className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 truncate">{pol.provider}</div>
-                         <div className="text-sm font-bold text-slate-800 leading-tight truncate" title={pol.name}>{pol.name}</div>
-                      </div>
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide whitespace-nowrap ${
-                         pol.type === 'Life' ? 'bg-blue-50 text-blue-600' :
-                         pol.type === 'Critical Illness' ? 'bg-rose-50 text-rose-600' :
-                         pol.type === 'Medical' ? 'bg-emerald-50 text-emerald-600' :
-                         'bg-slate-100 text-slate-600'
-                      }`}>
-                         {pol.type}
-                      </span>
-                   </div>
-
-                   {/* Key Stats - Compact Grid */}
-                   <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
-                         <span className="text-[9px] text-slate-400 font-bold uppercase block mb-0.5">保障額</span>
-                         <span className="text-sm font-bold text-slate-900 block truncate">
+          {/* POLICY TABLE - OPTIMIZED FOR DENSITY */}
+          <div className="w-full mb-auto px-1 mt-4">
+             <table className="w-full text-[10px] border-collapse table-fixed">
+                <thead>
+                   <tr className="bg-slate-100 border-y border-slate-200">
+                      <th className="text-left py-1.5 pl-2 font-bold text-slate-600 w-[28%]">保險公司 / 計劃名稱</th>
+                      <th className="text-left py-1.5 font-bold text-slate-600 w-[10%]">類別</th>
+                      <th className="text-right py-1.5 font-bold text-slate-600 w-[14%]">保障額</th>
+                      <th className="text-right py-1.5 font-bold text-slate-600 w-[12%]">保費</th>
+                      <th className="text-right py-1.5 font-bold text-slate-600 w-[12%]">現金價值</th>
+                      <th className="text-left py-1.5 pr-2 pl-2 font-bold text-slate-600 w-[24%]">附約 / 備註</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                   {client.insurance.map((pol, i) => (
+                      <tr key={i} className="hover:bg-slate-50 avoid-break group">
+                         <td className="py-1 pl-2 align-top">
+                            <div className="flex flex-col">
+                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5 truncate">{pol.provider}</span>
+                               <span className="font-bold text-slate-800 text-[11px] leading-tight mb-0.5">{pol.name}</span>
+                               <span className="text-[9px] text-slate-500">{pol.nature === 'Savings' ? '儲蓄型' : '消費型'}</span>
+                            </div>
+                         </td>
+                         <td className="py-1 align-top">
+                            <span className={`inline-block px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold border leading-none ${
+                               pol.type === 'Life' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                               pol.type === 'Critical Illness' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                               pol.type === 'Medical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                               'bg-slate-50 text-slate-600 border-slate-100'
+                            }`}>
+                               {pol.type === 'Critical Illness' ? '危疾' : pol.type === 'Life' ? '人壽' : pol.type === 'Medical' ? '醫療' : pol.type === 'Savings' ? '儲蓄' : pol.type}
+                            </span>
+                         </td>
+                         <td className="py-1 text-right align-top font-bold text-slate-700 text-[11px]">
                             ${pol.coverageAmount.toLocaleString()}
-                         </span>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
-                         <span className="text-[9px] text-slate-400 font-bold uppercase block mb-0.5">保費 ({pol.premiumFrequency === 'Monthly' ? '月' : '年'})</span>
-                         <span className="text-sm font-bold text-slate-900">${pol.premium.toLocaleString()}</span>
-                      </div>
-                   </div>
-
-                   {/* Details Grid - Removed Beneficiary */}
-                   <div className="space-y-1.5 text-[10px] mb-2 flex-1">
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                         <span className="text-slate-500 font-medium">性質</span>
-                         <span className="font-bold text-slate-700">{pol.nature === 'Savings' ? '儲蓄型' : '消費型'}</span>
-                      </div>
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                         <span className="text-slate-500 font-medium">退保價值</span>
-                         <span className="font-bold text-slate-700">${(pol.surrenderValue || 0).toLocaleString()}</span>
-                      </div>
-                      {pol.policyNotes && (
-                         <div className="bg-amber-50 p-1.5 rounded text-amber-800 border border-amber-100 mt-1 flex items-start gap-1.5">
-                            <FileText size={10} className="mt-0.5 shrink-0" />
-                            <span className="leading-snug line-clamp-2">{pol.policyNotes}</span>
-                         </div>
-                      )}
-                   </div>
-
-                   {/* Riders Section - Compact */}
-                   {(pol.riders && pol.riders.length > 0) && (
-                      <div className="mt-auto pt-2 border-t border-slate-100">
-                         <span className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">附約 (Riders)</span>
-                         <div className="space-y-1">
-                            {pol.riders.map((r, ridx) => (
-                               <div key={ridx} className="flex justify-between items-center text-[9px] bg-slate-50 px-1.5 py-1 rounded">
-                                  <span className="font-bold text-slate-600 truncate max-w-[100px]">{r.name}</span>
-                                  <span className="font-mono text-slate-500">+${r.coverageAmount.toLocaleString()}</span>
-                               </div>
-                            ))}
-                         </div>
-                      </div>
-                   )}
-                </div>
-             ))}
+                         </td>
+                         <td className="py-1 text-right align-top">
+                            <div className="flex flex-col items-end">
+                               <span className="font-bold text-slate-800 text-[11px]">${pol.premium.toLocaleString()}</span>
+                               <span className="text-[9px] text-slate-400 leading-none mt-0.5">{pol.premiumFrequency === 'Monthly' ? '月繳' : '年繳'}</span>
+                            </div>
+                         </td>
+                         <td className="py-1 text-right align-top font-medium text-slate-700 text-[11px]">
+                            ${(pol.surrenderValue || 0).toLocaleString()}
+                         </td>
+                         <td className="py-1 pr-2 pl-2 align-top">
+                            <div className="flex flex-col gap-1">
+                               {pol.riders && pol.riders.length > 0 && (
+                                  <div className="space-y-0.5">
+                                     {pol.riders.map((r, ridx) => (
+                                        <div key={ridx} className="flex justify-between items-center text-[9px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                           <span className="truncate max-w-[120px] font-medium">{r.name}</span>
+                                           <span className="font-mono text-[8px]">+${r.coverageAmount.toLocaleString()}</span>
+                                        </div>
+                                     ))}
+                                  </div>
+                               )}
+                               {pol.policyNotes && (
+                                  <div className="text-[9px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 leading-snug flex items-start gap-1">
+                                     <FileText size={10} className="mt-0.5 shrink-0 opacity-50" />
+                                     <span className="line-clamp-2">{pol.policyNotes}</span>
+                                  </div>
+                               )}
+                            </div>
+                         </td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
           </div>
 
-          {/* FOOTER PAGE 2 */}
-          <div className="absolute bottom-0 left-0 right-0 pt-4 border-t border-slate-100 text-[9px] text-slate-400 text-center">
-             <p>CONFIDENTIAL | Page 2 of 2</p>
-          </div>
+          <ReportFooter page={2} total={2} />
       </div>
 
     </div>

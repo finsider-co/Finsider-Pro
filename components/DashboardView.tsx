@@ -236,7 +236,7 @@ export const DashboardView: React.FC<Props> = ({ data }) => {
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={80}
+                  outerRadius={90}
                   paddingAngle={5}
                   dataKey="value"
                   label={renderCustomizedLabel}

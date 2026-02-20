@@ -108,6 +108,17 @@ export interface FinancialNeeds {
   emergencyFund: number; // 緊急預備金 (額外)
 }
 
+export interface ProjectedPolicy {
+  id: string;
+  name: string;
+  startAge: number; // Age when the policy/asset starts contributing or is relevant
+  initialValue: number; // Initial value at startAge
+  growthRate: number; // Annual growth rate (%)
+  dividendRate: number; // Annual dividend/coupon rate (%)
+  dividendStartAge: number; // Age when dividends start paying out
+  type: 'POLICY' | 'ASSET' | 'ANNUITY';
+}
+
 export interface ClientProfile {
   id: string;
   name: string;
@@ -124,7 +135,8 @@ export interface ClientProfile {
   insurance: InsurancePolicy[];
   portfolio: InvestmentHolding[];
   medicalPlans: MedicalPlanDetails[];
-  financialNeeds?: FinancialNeeds; // Optional to support existing data
+  financialNeeds?: FinancialNeeds;
+  projectedPolicies?: ProjectedPolicy[]; // New: For Asset Projection
 }
 
 // --- Auth & Admin Types ---
@@ -142,4 +154,4 @@ export interface UserProfile {
   lastLogin?: string;
 }
 
-export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'FIRE' | 'EDITOR' | 'ADMIN_SETTINGS' | 'PROFILE';
+export type ViewState = 'DASHBOARD' | 'CASHFLOW' | 'NETWORTH' | 'PORTFOLIO' | 'INSURANCE' | 'ASSET_PROJECTION' | 'FIRE' | 'EDITOR' | 'ADMIN_SETTINGS' | 'PROFILE';

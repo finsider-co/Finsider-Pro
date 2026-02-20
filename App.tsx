@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, PieChart, Wallet, Shield, LineChart, Sparkles, Menu, Users, Edit3, LogOut, Download, Flame, Settings, Printer, X, ArrowLeft, Loader2, FileText } from 'lucide-react';
+import { LayoutDashboard, PieChart, Wallet, Shield, LineChart, Sparkles, Menu, Users, Edit3, LogOut, Download, Flame, Settings, Printer, X, ArrowLeft, Loader2, FileText, TrendingUp } from 'lucide-react';
 import { DashboardView } from './components/DashboardView';
 import { CashFlowView } from './components/CashFlowView';
 import { BalanceSheetView } from './components/BalanceSheetView';
@@ -10,6 +10,7 @@ import { AIAdvisor } from './components/AIAdvisor';
 import { ClientList } from './components/ClientList';
 import { DataEditor } from './components/DataEditor';
 import { LoginView } from './components/LoginView';
+import { AssetProjectionView } from './components/AssetProjectionView';
 import { FinancialFreedomView } from './components/FinancialFreedomView';
 import { AdminSettings } from './components/AdminSettings';
 import { UserProfileView } from './components/UserProfileView';
@@ -63,38 +64,41 @@ const App: React.FC = () => {
      if (!activeClient) return;
      setIsGeneratingPdf(true);
 
-     const element = document.getElementById('printable-paper');
-     if (!element) {
-        setIsGeneratingPdf(false);
-        return;
-     }
+     // Wait for DOM to update with 'pdf-mode' class
+     setTimeout(() => {
+        const element = document.getElementById('printable-paper');
+        if (!element) {
+           setIsGeneratingPdf(false);
+           return;
+        }
 
-     // Configure PDF options for optimal page breaking
-     const opt = {
-       margin: 0, // We rely on component padding (p-10)
-       filename: `FinsiderPro_Report_${activeClient.name.replace(/[^a-z0-9]/gi, '_')}.pdf`,
-       image: { type: 'jpeg', quality: 0.98 },
-       html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
-       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-       // 'css' mode respects 'break-inside: avoid', 'legacy' is a fallback
-       pagebreak: { mode: ['css', 'legacy'] } 
-     };
+        // Configure PDF options for optimal page breaking
+        const opt = {
+          margin: 0, // We rely on component padding (p-10)
+          filename: `FinsiderPro_Report_${activeClient.name.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          // 'css' mode respects 'break-inside: avoid', 'legacy' is a fallback
+          pagebreak: { mode: ['css', 'legacy'] } 
+        };
 
-     // Access html2pdf from window object (loaded via CDN in index.html)
-     // @ts-ignore
-     if (window.html2pdf) {
+        // Access html2pdf from window object (loaded via CDN in index.html)
         // @ts-ignore
-        window.html2pdf().set(opt).from(element).save().then(() => {
+        if (window.html2pdf) {
+           // @ts-ignore
+           window.html2pdf().set(opt).from(element).save().then(() => {
+              setIsGeneratingPdf(false);
+           }).catch((err: any) => {
+              console.error('PDF Generation Error:', err);
+              setIsGeneratingPdf(false);
+              alert('PDF 生成失敗，請重試 (Failed to generate PDF)');
+           });
+        } else {
+           alert('PDF 庫尚未加載，請稍後再試 (PDF Library not loaded)');
            setIsGeneratingPdf(false);
-        }).catch((err: any) => {
-           console.error('PDF Generation Error:', err);
-           setIsGeneratingPdf(false);
-           alert('PDF 生成失敗，請重試 (Failed to generate PDF)');
-        });
-     } else {
-        alert('PDF 庫尚未加載，請稍後再試 (PDF Library not loaded)');
-        setIsGeneratingPdf(false);
-     }
+        }
+     }, 100);
   };
 
   // Render Logic
@@ -130,6 +134,7 @@ const App: React.FC = () => {
       case 'EDITOR': return <DataEditor client={activeClient} onSave={(c) => { updateClient(c); alert('已成功儲存！'); }} />;
       case 'PORTFOLIO': return <PortfolioView data={activeClient} />;
       case 'INSURANCE': return <InsuranceAnalysisView data={activeClient} />;
+      case 'ASSET_PROJECTION': return <AssetProjectionView data={activeClient} onUpdate={updateClient} />;
       case 'FIRE': return <FinancialFreedomView data={activeClient} />;
       default: return <DashboardView data={activeClient} />;
     }
@@ -183,7 +188,7 @@ const App: React.FC = () => {
                    Min-height set to A4 height (297mm) for preview visualization.
                    Height is auto to allow content to grow beyond one page.
                 */}
-                <div id="printable-paper" className="bg-white w-[210mm] min-h-[297mm] shadow-2xl mx-auto origin-top flex flex-col relative">
+                <div id="printable-paper" className={`w-[210mm] mx-auto origin-top flex flex-col relative bg-transparent ${isGeneratingPdf ? 'pdf-mode' : ''}`}>
                    <PrintableReport client={activeClient} />
                 </div>
             </div>
@@ -228,6 +233,7 @@ const App: React.FC = () => {
               <NavItem icon={<LineChart size={20} />} label="資產負債" isActive={currentView === 'NETWORTH'} isOpen={isSidebarOpen} onClick={() => setCurrentView('NETWORTH')} />
               <NavItem icon={<PieChart size={20} />} label="投資組合" isActive={currentView === 'PORTFOLIO'} isOpen={isSidebarOpen} onClick={() => setCurrentView('PORTFOLIO')} />
               <NavItem icon={<Shield size={20} />} label="保單分析" isActive={currentView === 'INSURANCE'} isOpen={isSidebarOpen} onClick={() => setCurrentView('INSURANCE')} />
+              <NavItem icon={<TrendingUp size={20} />} label="資產預測" isActive={currentView === 'ASSET_PROJECTION'} isOpen={isSidebarOpen} onClick={() => setCurrentView('ASSET_PROJECTION')} />
               <NavItem icon={<Flame size={20} />} label="財務自由 (FIRE)" isActive={currentView === 'FIRE'} isOpen={isSidebarOpen} onClick={() => setCurrentView('FIRE')} />
             </nav>
 
@@ -278,6 +284,7 @@ const App: React.FC = () => {
                    currentView === 'CASHFLOW' ? '現金流分析 (Cash Flow)' :
                    currentView === 'NETWORTH' ? '資產負債表 (Balance Sheet)' :
                    currentView === 'PORTFOLIO' ? '投資組合 (Portfolio)' : 
+                   currentView === 'ASSET_PROJECTION' ? '資產預測 (Asset Projection)' :
                    currentView === 'FIRE' ? '財務自由 (FIRE Calculator)' :
                    currentView === 'ADMIN_SETTINGS' ? '系統管理 (Admin)' :
                    currentView === 'PROFILE' ? '個人資料設定 (Profile)' :

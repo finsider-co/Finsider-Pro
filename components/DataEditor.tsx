@@ -6,7 +6,7 @@ import { Save, Plus, Trash2, Calendar, Gift, PieChart, HeartPulse, Paperclip, X,
 
 interface Props {
   client: ClientProfile;
-  onSave: (updatedClient: ClientProfile) => void;
+  onSave: (updatedClient: ClientProfile) => Promise<void>;
 }
 
 type TabType = 'PROFILE' | 'ASSETS' | 'LIABILITIES' | 'CASHFLOW' | 'PORTFOLIO' | 'INSURANCE' | 'MEDICAL';
@@ -96,10 +96,18 @@ const MoneyInput: React.FC<MoneyInputProps> = ({ value, onChange, className, ...
 export const DataEditor: React.FC<Props> = ({ client, onSave }) => {
   const [activeTab, setActiveTab] = useState<TabType>('PROFILE');
   const [formData, setFormData] = useState<ClientProfile>(JSON.parse(JSON.stringify(client)));
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    const updated = { ...formData, lastUpdated: new Date().toISOString() };
-    onSave(updated);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const updated = { ...formData, lastUpdated: new Date().toISOString() };
+      await onSave(updated);
+    } catch (error) {
+      console.error("Save failed in DataEditor", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const updateProfileField = (field: keyof ClientProfile, value: any) => {
@@ -207,9 +215,11 @@ export const DataEditor: React.FC<Props> = ({ client, onSave }) => {
         <h3 className="font-bold text-slate-800 text-xl">編輯客戶資料</h3>
         <button 
           onClick={handleSave}
-          className="flex items-center gap-2 bg-emerald-500 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-600 text-sm font-bold transition-colors shadow-sm"
+          disabled={isSaving}
+          className="flex items-center gap-2 bg-emerald-500 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-600 text-sm font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-wait"
         >
-          <Save size={18} /> 儲存變更
+          {isSaving ? <span className="animate-spin">⏳</span> : <Save size={18} />} 
+          {isSaving ? '儲存中...' : '儲存變更'}
         </button>
       </div>
 
@@ -329,6 +339,96 @@ export const DataEditor: React.FC<Props> = ({ client, onSave }) => {
                         <label className="text-xs font-bold text-slate-500 mb-1 block">自付費 (Deductible)</label>
                         <MoneyInput value={plan.deductible} onChange={val => updateItem('medicalPlans', plan.id, 'deductible', val)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700" />
                       </div>
+                   </div>
+
+                   {/* Benefit Limits Section */}
+                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                      <h5 className="text-xs font-bold text-slate-400 uppercase mb-3 border-b border-slate-200 pb-2">基本保障限額 (Basic Benefit Limits)</h5>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                         <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">每日病房 (Room & Board)</label>
+                            <MoneyInput value={plan.limitRoomAndBoard} onChange={val => updateItem('medicalPlans', plan.id, 'limitRoomAndBoard', val)} className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">外科手術費 (Surgeon)</label>
+                            <MoneyInput value={plan.limitSurgical} onChange={val => updateItem('medicalPlans', plan.id, 'limitSurgical', val)} className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">麻醉師費 (Anaesthetist)</label>
+                            <MoneyInput value={plan.limitAnaesthetist} onChange={val => updateItem('medicalPlans', plan.id, 'limitAnaesthetist', val)} className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">手術室費 (Operating Theatre)</label>
+                            <MoneyInput value={plan.limitOperatingTheatre} onChange={val => updateItem('medicalPlans', plan.id, 'limitOperatingTheatre', val)} className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">醫院雜費 (Misc Services)</label>
+                            <MoneyInput value={plan.limitMiscServices} onChange={val => updateItem('medicalPlans', plan.id, 'limitMiscServices', val)} className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">專科醫生巡房 (Specialist)</label>
+                            <MoneyInput value={plan.limitSpecialist} onChange={val => updateItem('medicalPlans', plan.id, 'limitSpecialist', val)} className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                         </div>
+                         <div className="col-span-2 md:col-span-3 mt-2 pt-2 border-t border-slate-200">
+                            <div className="flex items-center gap-2">
+                               <input 
+                                  type="checkbox" 
+                                  checked={plan.fullCover || false} 
+                                  onChange={e => updateItem('medicalPlans', plan.id, 'fullCover', e.target.checked)}
+                                  className="rounded text-emerald-500 focus:ring-emerald-500"
+                               />
+                               <label className="text-xs font-bold text-slate-700">全數賠償 (Full Cover) - 忽略以上細項限額</label>
+                            </div>
+                            {plan.fullCover && (
+                               <div className="mt-2">
+                                  <label className="text-[10px] font-bold text-slate-500 block mb-1">年度限額 (Annual Limit)</label>
+                                  <MoneyInput value={plan.overallAnnualLimit} onChange={val => updateItem('medicalPlans', plan.id, 'overallAnnualLimit', val)} className="w-full md:w-1/3 p-2 bg-white border border-slate-200 rounded text-xs font-mono" />
+                               </div>
+                            )}
+                         </div>
+                      </div>
+                   </div>
+
+                   {/* SMM Section */}
+                   <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-2">
+                      <div className="flex items-center justify-between mb-3 border-b border-indigo-100 pb-2">
+                         <h5 className="text-xs font-bold text-indigo-800 uppercase">額外醫療保障 (SMM)</h5>
+                         <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-indigo-600">啟用 SMM</label>
+                            <input 
+                               type="checkbox" 
+                               checked={plan.smmEnabled || false} 
+                               onChange={e => updateItem('medicalPlans', plan.id, 'smmEnabled', e.target.checked)}
+                               className="rounded text-indigo-500 focus:ring-indigo-500"
+                            />
+                         </div>
+                      </div>
+                      
+                      {plan.smmEnabled && (
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+                            <div>
+                               <label className="text-[10px] font-bold text-indigo-500 block mb-1">賠償百分比 (Reimbursement %)</label>
+                               <div className="flex items-center gap-2">
+                                  <input 
+                                     type="number" 
+                                     value={(plan.smmReimbursementRate || 0.8) * 100} 
+                                     onChange={e => updateItem('medicalPlans', plan.id, 'smmReimbursementRate', parseFloat(e.target.value) / 100)}
+                                     className="w-20 p-2 bg-white border border-indigo-200 rounded text-xs font-mono text-center"
+                                     min="0" max="100"
+                                  />
+                                  <span className="text-xs text-indigo-400">%</span>
+                               </div>
+                            </div>
+                            <div>
+                               <label className="text-[10px] font-bold text-indigo-500 block mb-1">SMM 年度限額 (Annual Limit)</label>
+                               <MoneyInput 
+                                  value={plan.smmAnnualLimit || 0} 
+                                  onChange={val => updateItem('medicalPlans', plan.id, 'smmAnnualLimit', val)} 
+                                  className="w-full p-2 bg-white border border-indigo-200 rounded text-xs font-mono" 
+                               />
+                            </div>
+                         </div>
+                      )}
                    </div>
                    <button onClick={() => removeItem('medicalPlans', plan.id)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors">
                      <Trash2 size={18} />
@@ -481,10 +581,6 @@ export const DataEditor: React.FC<Props> = ({ client, onSave }) => {
                   <div className="col-span-1">
                     <label className="text-xs font-bold text-slate-500 mb-1 block">現價</label>
                     <input type="number" value={item.currentPrice} onChange={e => updateItem('portfolio', item.id, 'currentPrice', parseFloat(e.target.value))} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
-                  </div>
-                  <div className="col-span-1">
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">比重 %</label>
-                    <input type="number" value={item.allocation} onChange={e => updateItem('portfolio', item.id, 'allocation', parseFloat(e.target.value))} className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500" />
                   </div>
                   <div className="col-span-2 md:col-span-2">
                     <label className="text-xs font-bold text-slate-500 mb-1 block">資產名稱</label>

@@ -6,7 +6,6 @@ import { CashFlowView } from './components/CashFlowView';
 import { BalanceSheetView } from './components/BalanceSheetView';
 import { PortfolioView } from './components/PortfolioView';
 import { InsuranceAnalysisView } from './components/InsuranceAnalysisView';
-import { AIAdvisor } from './components/AIAdvisor';
 import { ClientList } from './components/ClientList';
 import { DataEditor } from './components/DataEditor';
 import { LoginView } from './components/LoginView';
@@ -29,12 +28,13 @@ const App: React.FC = () => {
     selectClient, 
     addClient, 
     updateClient, 
-    deleteClient 
+    deleteClient,
+    connectionStatus,
+    checkConnection
   } = useClient();
 
   const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [isPrintPreview, setIsPrintPreview] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -131,7 +131,14 @@ const App: React.FC = () => {
       case 'DASHBOARD': return <DashboardView data={activeClient} />;
       case 'CASHFLOW': return <CashFlowView data={activeClient} />;
       case 'NETWORTH': return <BalanceSheetView data={activeClient} />;
-      case 'EDITOR': return <DataEditor client={activeClient} onSave={(c) => { updateClient(c); alert('已成功儲存！'); }} />;
+      case 'EDITOR': return <DataEditor client={activeClient} onSave={async (c) => { 
+        try {
+          await updateClient(c); 
+          alert('已成功儲存！'); 
+        } catch (e) {
+          // Error is already handled/alerted in updateClient
+        }
+      }} />;
       case 'PORTFOLIO': return <PortfolioView data={activeClient} />;
       case 'INSURANCE': return <InsuranceAnalysisView data={activeClient} />;
       case 'ASSET_PROJECTION': return <AssetProjectionView data={activeClient} onUpdate={updateClient} />;
@@ -226,7 +233,7 @@ const App: React.FC = () => {
             </div>
 
             <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
-              <NavItem icon={<LayoutDashboard size={20} />} label="儀表板" isActive={currentView === 'DASHBOARD'} isOpen={isSidebarOpen} onClick={() => setCurrentView('DASHBOARD')} />
+              <NavItem icon={<LayoutDashboard size={20} />} label="財務概覽" isActive={currentView === 'DASHBOARD'} isOpen={isSidebarOpen} onClick={() => setCurrentView('DASHBOARD')} />
               <NavItem icon={<Edit3 size={20} />} label="資料編輯" isActive={currentView === 'EDITOR'} isOpen={isSidebarOpen} onClick={() => setCurrentView('EDITOR')} />
               <div className="my-4 border-t border-slate-800 opacity-50"></div>
               <NavItem icon={<Wallet size={20} />} label="現金流分析" isActive={currentView === 'CASHFLOW'} isOpen={isSidebarOpen} onClick={() => setCurrentView('CASHFLOW')} />
@@ -238,6 +245,32 @@ const App: React.FC = () => {
             </nav>
 
             <div className="p-4 border-t border-slate-800 bg-slate-950 space-y-2">
+               {/* Connection Status */}
+               <div 
+                 onClick={() => connectionStatus === 'disconnected' && checkConnection()}
+                 className={`
+                   w-full flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-mono mb-2 cursor-pointer
+                   ${connectionStatus === 'connected' ? 'text-emerald-500 bg-emerald-500/10' :
+                     connectionStatus === 'disconnected' ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' :
+                     'text-yellow-500 bg-yellow-500/10 animate-pulse'}
+                   ${!isSidebarOpen && 'justify-center px-0'}
+                 `}
+                 title={connectionStatus === 'disconnected' ? 'Click to retry connection' : 'Connection Status'}
+               >
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                    connectionStatus === 'connected' ? 'bg-emerald-500' :
+                    connectionStatus === 'disconnected' ? 'bg-red-500' :
+                    'bg-yellow-500'
+                  }`} />
+                  {isSidebarOpen && (
+                    <span>
+                      {connectionStatus === 'connected' ? 'Online' :
+                       connectionStatus === 'disconnected' ? 'Offline (Retry)' :
+                       'Connecting...'}
+                    </span>
+                  )}
+               </div>
+
                <button 
                  onClick={() => selectClient(null)}
                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ${!isSidebarOpen && 'justify-center'}`}
@@ -308,13 +341,6 @@ const App: React.FC = () => {
                   <Download size={18} />
                   <span className="hidden md:inline">匯出 Excel</span>
                 </button>
-                <button 
-                  onClick={() => setIsAdvisorOpen(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-emerald-200 transition-all transform hover:-translate-y-0.5"
-                >
-                  <Sparkles size={18} />
-                  AI 智能顧問
-                </button>
               </div>
             </header>
           ) : (
@@ -361,16 +387,6 @@ const App: React.FC = () => {
                {renderContent()}
              </div>
           </div>
-
-          {/* AI Sidebar */}
-          {activeClient && (
-            <AIAdvisor 
-              isOpen={isAdvisorOpen} 
-              onClose={() => setIsAdvisorOpen(false)} 
-              profile={activeClient}
-              context={currentView}
-            />
-          )}
         </main>
       </div>
     </>

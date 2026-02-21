@@ -33,6 +33,11 @@ export const AssetProjectionView: React.FC<Props> = ({ data, onUpdate }) => {
   const [newAssetDividend, setNewAssetDividend] = useState(6.0);
   const [newAssetDivStartAge, setNewAssetDivStartAge] = useState(60);
 
+  // Chart Visibility State
+  const [showTotalAssets, setShowTotalAssets] = useState(true);
+  const [showNetWorth, setShowNetWorth] = useState(true);
+  const [showPassiveIncome, setShowPassiveIncome] = useState(true);
+
   // Persistence Helper
   const updateSmartAssets = (newAssets: ProjectedPolicy[]) => {
     setSmartAssets(newAssets);
@@ -366,26 +371,48 @@ export const AssetProjectionView: React.FC<Props> = ({ data, onUpdate }) => {
                  <div>
                     <h3 className="font-bold text-slate-800 text-lg">資產增長趨勢</h3>
                     <p className="text-xs text-slate-500 mt-1">預測期內資產淨值及被動收入的變化</p>
+                    
+                    {/* Visibility Toggles */}
+                    <div className="flex gap-4 mt-4">
+                       <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                          <input type="checkbox" checked={showTotalAssets} onChange={e => setShowTotalAssets(e.target.checked)} className="rounded text-blue-500 focus:ring-blue-500" />
+                          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> 總資產</span>
+                       </label>
+                       <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                          <input type="checkbox" checked={showNetWorth} onChange={e => setShowNetWorth(e.target.checked)} className="rounded text-emerald-500 focus:ring-emerald-500" />
+                          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> 資產淨值</span>
+                       </label>
+                       <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                          <input type="checkbox" checked={showPassiveIncome} onChange={e => setShowPassiveIncome(e.target.checked)} className="rounded text-amber-500 focus:ring-amber-500" />
+                          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500"></div> 每月被動收入</span>
+                       </label>
+                    </div>
                  </div>
                  <div className="flex gap-6">
-                    <div className="text-right">
-                       <p className="text-xs text-slate-400 font-bold uppercase mb-1">預測總資產</p>
-                       <p className="text-xl font-bold text-blue-600">${projectionData[projectionData.length-1].totalAssets.toLocaleString()}</p>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-xs text-slate-400 font-bold uppercase mb-1">預測資產淨值</p>
-                       <p className="text-xl font-bold text-emerald-600">${projectionData[projectionData.length-1].netWorth.toLocaleString()}</p>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-xs text-slate-400 font-bold uppercase mb-1">預測月被動收入</p>
-                       <p className="text-xl font-bold text-amber-500">${projectionData[projectionData.length-1].passiveIncome.toLocaleString()}</p>
-                    </div>
+                    {showTotalAssets && (
+                       <div className="text-right">
+                          <p className="text-xs text-slate-400 font-bold uppercase mb-1">預測總資產</p>
+                          <p className="text-xl font-bold text-blue-600">${projectionData[projectionData.length-1].totalAssets.toLocaleString()}</p>
+                       </div>
+                    )}
+                    {showNetWorth && (
+                       <div className="text-right">
+                          <p className="text-xs text-slate-400 font-bold uppercase mb-1">預測資產淨值</p>
+                          <p className="text-xl font-bold text-emerald-600">${projectionData[projectionData.length-1].netWorth.toLocaleString()}</p>
+                       </div>
+                    )}
+                    {showPassiveIncome && (
+                       <div className="text-right">
+                          <p className="text-xs text-slate-400 font-bold uppercase mb-1">每月被動收入</p>
+                          <p className="text-xl font-bold text-amber-500">${projectionData[projectionData.length-1].passiveIncome.toLocaleString()}</p>
+                       </div>
+                    )}
                  </div>
               </div>
               
               <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                   <ComposedChart data={projectionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                   <ComposedChart data={projectionData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                       <defs>
                          <linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
@@ -396,12 +423,13 @@ export const AssetProjectionView: React.FC<Props> = ({ data, onUpdate }) => {
                          dataKey="age" 
                          type="number" 
                          domain={['dataMin', 'dataMax']} 
-                         tickCount={10}
-                         axisLine={false} 
-                         tickLine={false} 
-                         tick={{fill: '#94a3b8', fontSize: 12}} 
+                         tickCount={Math.min(projectionYears, 15)}
+                         interval="preserveStartEnd"
+                         axisLine={true} 
+                         tickLine={true} 
+                         tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} 
                          dy={10} 
-                         label={{ value: '年齡', position: 'insideBottomRight', offset: -5, fill: '#94a3b8', fontSize: 10 }}
+                         label={{ value: '年齡 (歲)', position: 'insideBottomRight', offset: -10, fill: '#64748b', fontSize: 12, fontWeight: 600 }}
                       />
                       <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(val) => `$${val/1000000}M`} />
                       <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(val) => `$${val/1000}K`} />
@@ -412,9 +440,15 @@ export const AssetProjectionView: React.FC<Props> = ({ data, onUpdate }) => {
                          formatter={(value: number) => `$${value.toLocaleString()}`}
                       />
                       <Legend verticalAlign="top" height={36}/>
-                      <Area yAxisId="left" type="monotone" dataKey="netWorth" name="資產淨值" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorNetWorth)" />
-                      <Line yAxisId="left" type="monotone" dataKey="totalAssets" name="總資產" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                      <Bar yAxisId="right" dataKey="passiveIncome" name="預測月被動收入" fill="#f59e0b" opacity={0.5} barSize={20} />
+                      {showNetWorth && (
+                         <Area yAxisId="left" type="monotone" dataKey="netWorth" name="資產淨值" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorNetWorth)" />
+                      )}
+                      {showTotalAssets && (
+                         <Line yAxisId="left" type="monotone" dataKey="totalAssets" name="總資產" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                      )}
+                      {showPassiveIncome && (
+                         <Bar yAxisId="right" dataKey="passiveIncome" name="每月被動收入" fill="#f59e0b" opacity={0.5} barSize={20} />
+                      )}
                    </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -423,7 +457,7 @@ export const AssetProjectionView: React.FC<Props> = ({ data, onUpdate }) => {
            {/* Summary Table */}
            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                 <h3 className="font-bold text-slate-800">詳細數據 (Detailed Projection)</h3>
+                 <h3 className="font-bold text-slate-800">詳細數據</h3>
                  <span className="text-xs text-slate-400">每 5 年快照</span>
               </div>
               <table className="w-full text-sm text-left">
@@ -432,7 +466,7 @@ export const AssetProjectionView: React.FC<Props> = ({ data, onUpdate }) => {
                        <th className="px-6 py-3">年齡 (年份)</th>
                        <th className="px-6 py-3 text-right">資產淨值</th>
                        <th className="px-6 py-3 text-right">實質淨值 (通脹後)</th>
-                       <th className="px-6 py-3 text-right">預測月被動收入</th>
+                       <th className="px-6 py-3 text-right">每月被動收入</th>
                     </tr>
                  </thead>
                  <tbody className="divide-y divide-slate-50">

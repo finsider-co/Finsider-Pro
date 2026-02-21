@@ -83,6 +83,11 @@ export interface MedicalPlanDetails {
   limitSpecialist: number; // Doctor visits
   overallAnnualLimit: number; // Full cover pool limit if applicable (0 if itemized only)
   fullCover?: boolean; // If true, ignore sub-limits up to annual limit (simplified)
+  
+  // SMM (Supplementary Major Medical)
+  smmEnabled?: boolean;
+  smmReimbursementRate?: number; // e.g., 0.8 for 80%
+  smmAnnualLimit?: number;
 }
 
 export interface InvestmentHolding {

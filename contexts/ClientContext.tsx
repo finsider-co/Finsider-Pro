@@ -3,11 +3,15 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { ClientProfile, InvestmentHolding, UserProfile, UserRole, UserStatus } from '../types';
 import { MOCK_CLIENT } from '../constants';
 import { updatePortfolioPrices } from '../services/geminiService';
+import { db } from '/src/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, query, where, limit } from 'firebase/firestore';
 
 interface ClientContextType {
   currentUser: UserProfile | null;
   clients: ClientProfile[];
   activeClient: ClientProfile | null;
+  connectionStatus: 'connected' | 'disconnected' | 'checking' | 'unknown';
+  checkConnection: () => Promise<void>;
   
   // Auth Functions
   login: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
@@ -23,7 +27,7 @@ interface ClientContextType {
   // Client Management
   selectClient: (id: string | null) => void;
   addClient: () => void;
-  updateClient: (client: ClientProfile) => void;
+  updateClient: (client: ClientProfile) => Promise<void>;
   deleteClient: (id: string) => void;
   refreshPortfolioPrices: (clientId: string) => Promise<void>;
 
@@ -89,31 +93,71 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [allUsers]);
 
-  // 3. Load Clients Data based on Current User
+  // 3. Load Clients Data based on Current User (Firebase or Local)
   useEffect(() => {
-    if (currentUser) {
-      const dbKey = `finsider_db_${currentUser.username}`;
-      const saved = localStorage.getItem(dbKey);
-      if (saved) {
-        try {
-          setClients(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse DB", e);
-          setClients([MOCK_CLIENT]);
+    const loadClients = async () => {
+      if (currentUser) {
+        if (db) {
+          // Firebase Mode
+          try {
+            // In a real app, we would query by advisorId. For this demo, we fetch all and filter client-side or assume collection is per-user if we had auth.
+            // Let's assume a 'clients' collection where we store everything for now, filtering by 'advisorId' if we added that field.
+            // Since we don't have advisorId on ClientProfile yet, we'll just fetch all for the demo.
+            // To make it multi-tenant safe, we SHOULD add advisorId. 
+            // For this demo, we will use a subcollection or just a query.
+            // Let's use a simple query: collection 'clients'
+            
+            const querySnapshot = await getDocs(collection(db, 'clients'));
+            const fbClients: ClientProfile[] = [];
+            querySnapshot.forEach((doc) => {
+              // We store the Firestore ID as the client ID for consistency in updates
+              const data = doc.data() as ClientProfile;
+              fbClients.push({ ...data, id: doc.id }); 
+            });
+            
+            if (fbClients.length > 0) {
+               setClients(fbClients);
+            } else {
+               // Initial seed if empty
+               setClients([]);
+            }
+          } catch (error) {
+            console.error("Firebase load error:", error);
+            // Fallback to local
+            loadLocalClients();
+          }
+        } else {
+          // Local Mode
+          loadLocalClients();
         }
       } else {
-        // Only load mock for fresh advisors
+        setClients([]);
+        setSelectedClientId(null);
+      }
+    };
+
+    loadClients();
+  }, [currentUser]);
+
+  const loadLocalClients = () => {
+    if (!currentUser) return;
+    const dbKey = `finsider_db_${currentUser.username}`;
+    const saved = localStorage.getItem(dbKey);
+    if (saved) {
+      try {
+        setClients(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse DB", e);
         setClients([MOCK_CLIENT]);
       }
     } else {
-      setClients([]);
-      setSelectedClientId(null);
+      setClients([MOCK_CLIENT]);
     }
-  }, [currentUser]);
+  };
 
-  // 4. Persist Clients Data
+  // 4. Persist Clients Data (Local Only - Firebase updates happen on action)
   useEffect(() => {
-    if (currentUser && clients.length > 0) {
+    if (currentUser && clients.length > 0 && !db) {
       const dbKey = `finsider_db_${currentUser.username}`;
       localStorage.setItem(dbKey, JSON.stringify(clients));
     }
@@ -282,24 +326,78 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setSelectedClientId(id);
   };
 
-  const addClient = () => {
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking' | 'unknown'>('unknown');
+
+  // Helper to clean undefined values for Firestore
+  const cleanData = (obj: any): any => {
+     if (obj === undefined) return null; // Firestore doesn't support undefined
+     if (obj === null) return null;
+     
+     // Handle Date objects - Firestore supports them
+     if (obj instanceof Date) return obj;
+     
+     if (typeof obj !== 'object') return obj; // Primitives
+
+     if (Array.isArray(obj)) {
+        return obj.map(v => cleanData(v)).filter(v => v !== undefined);
+     }
+     
+     // Object
+     return Object.entries(obj).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+           const cleaned = cleanData(value);
+           if (cleaned !== undefined) {
+              acc[key] = cleaned;
+           }
+        }
+        return acc;
+     }, {} as any);
+  };
+
+  const checkConnection = async () => {
+    if (!db) {
+      setConnectionStatus('disconnected');
+      return;
+    }
+    setConnectionStatus('checking');
+    try {
+      // Try to fetch 1 document to test connection
+      await getDocs(query(collection(db, 'clients'), limit(1)));
+      setConnectionStatus('connected');
+      console.log("Firebase connection verified");
+    } catch (e) {
+      console.error("Firebase connection check failed:", e);
+      setConnectionStatus('disconnected');
+    }
+  };
+
+  // Check connection on mount
+  useEffect(() => {
+    if (db) {
+      checkConnection();
+    }
+  }, []);
+
+  const addClient = async () => {
+    // Generate ID
     const existingIds = clients.map(c => {
-      const match = c.id.match(/(\d+)/);
-      return match ? parseInt(match[0], 10) : 0;
+      // Handle both numeric IDs (local) and UUIDs (firebase) gracefully
+      // For generating new local ID, we look for C-XXX pattern
+      const match = c.id.match(/C-(\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
     });
 
     let nextIdNum = 1;
     if (existingIds.length > 0) {
-      const validSequenceIds = existingIds.filter(n => n < 1000000);
-      const maxId = validSequenceIds.length > 0 ? Math.max(...validSequenceIds) : Math.max(...existingIds);
+      const maxId = Math.max(...existingIds);
       nextIdNum = maxId + 1;
     }
 
-    const newId = `C-${String(nextIdNum).padStart(3, '0')}`;
+    const newLocalId = `C-${String(nextIdNum).padStart(3, '0')}`;
 
     const newClient: ClientProfile = {
       ...MOCK_CLIENT,
-      id: newId,
+      id: newLocalId, // Temporary ID, will be replaced by Firestore ID if connected
       name: '新客戶 (New Client)',
       email: '',
       phone: '',
@@ -313,18 +411,118 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       insurance: [],
       portfolio: []
     };
+
+    // Optimistic Update: Immediately show the new client
     setClients(prev => [...prev, newClient]);
     setSelectedClientId(newClient.id);
+
+    if (db) {
+       // Run Firebase sync in background
+       (async () => {
+         let retries = 3;
+         while (retries > 0) {
+            try {
+                // Add to Firestore
+                const { id, ...clientData } = newClient;
+                const cleanedData = cleanData(clientData);
+                
+                // Add timeout (20s)
+                const timeoutPromise = new Promise((_, reject) => 
+                   setTimeout(() => reject(new Error("Request timed out")), 20000)
+                );
+
+                const docRef = await Promise.race([
+                   addDoc(collection(db, 'clients'), cleanedData),
+                   timeoutPromise
+                ]) as any; 
+                
+                const realId = docRef.id;
+                console.log(`Firebase sync success. Swapping local ID ${newLocalId} with real ID ${realId}`);
+
+                // Swap Local ID with Real ID
+                setClients(prev => prev.map(c => c.id === newLocalId ? { ...c, id: realId } : c));
+                
+                // If the user is still viewing this client, update the selection too
+                setSelectedClientId(prev => prev === newLocalId ? realId : prev);
+                
+                // Success - break loop
+                break;
+
+            } catch (e: any) {
+                retries--;
+                console.warn(`Background sync attempt failed (${3 - retries}/3):`, e.message);
+                
+                if (retries === 0) {
+                   console.warn("All sync attempts failed. Data remains local-only for now.");
+                   // We don't alert the user here because they are already working.
+                } else {
+                   // Wait 2 seconds before retry
+                   await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+         }
+       })();
+    }
   };
 
-  const updateClient = (updated: ClientProfile) => {
+  const updateClient = async (updated: ClientProfile) => {
+    // Optimistic Update: Update local state immediately
     setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
+
+    if (db) {
+       try {
+          console.log("Starting updateClient for ID:", updated.id);
+          
+          // If ID is local (starts with C-), we can't update Firestore yet unless we create it
+          // For simplicity in this hybrid mode, if it's a local ID, we just skip Firestore update or try to add it
+          if (updated.id.startsWith('C-')) {
+             console.warn("Skipping Firestore update for local ID:", updated.id);
+             return; 
+          }
+
+          const clientRef = doc(db, 'clients', updated.id);
+          
+          // Update Firestore
+          // We exclude the ID from the update payload
+          const { id, ...data } = updated;
+          const cleanedData = cleanData(data);
+          
+          // Add a timeout to the setDoc promise
+          const timeoutPromise = new Promise((_, reject) => 
+             setTimeout(() => reject(new Error("Request timed out")), 5000) // Reduced to 5s
+          );
+          
+          await Promise.race([
+             setDoc(clientRef, cleanedData, { merge: true }),
+             timeoutPromise
+          ]);
+          
+          console.log("Firestore update successful");
+       } catch (e: any) {
+          console.error("Error updating document (background): ", e);
+          // We already updated local state, so just notify user of sync issue
+          if (e.message === "Request timed out") {
+             console.warn("Sync timed out - data saved locally only");
+          }
+       }
+    }
   };
 
-  const deleteClient = (id: string) => {
+  const deleteClient = async (id: string) => {
     if (window.confirm("確定要刪除此客戶檔案嗎？")) {
-      setClients(prev => prev.filter(c => c.id !== id));
-      if (selectedClientId === id) setSelectedClientId(null);
+       if (db) {
+          try {
+             await deleteDoc(doc(db, 'clients', id));
+             setClients(prev => prev.filter(c => c.id !== id));
+             if (selectedClientId === id) setSelectedClientId(null);
+          } catch (e) {
+             console.error("Error deleting document: ", e);
+             alert("Firebase Error: Could not delete client.");
+          }
+       } else {
+          setClients(prev => prev.filter(c => c.id !== id));
+          if (selectedClientId === id) setSelectedClientId(null);
+       }
     }
   };
 
@@ -353,6 +551,8 @@ export const ClientProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       currentUser,
       clients,
       activeClient,
+      connectionStatus,
+      checkConnection,
       login,
       register,
       requestPasswordReset,

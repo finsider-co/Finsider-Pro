@@ -298,11 +298,6 @@ export const DashboardView: React.FC<Props> = ({ data }) => {
                     </div>
                  </div>
               )}
-              
-              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200">
-                 <h5 className="font-bold text-slate-800 mb-2">下次檢討日期</h5>
-                 <p className="text-sm text-slate-500">年度投資組合再平衡將於 45 天後進行。</p>
-              </div>
            </div>
         </div>
       </div>

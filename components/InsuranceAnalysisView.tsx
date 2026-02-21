@@ -90,33 +90,70 @@ export const InsuranceAnalysisView: React.FC<Props> = ({ data }) => {
 
       // 1. Calculate Gross Claim for this plan
       let grossClaim = 0;
+      let basicBenefit = 0;
+      let smmBenefit = 0;
+
+      // Helper to calculate benefit for a specific item
+      const calcBenefit = (cost: number, limit: number) => Math.min(cost, limit);
 
       if (plan.fullCover) {
-         // Simplified Full Cover Logic (subject to deductible)
+         // Simplified Full Cover Logic
          const totalRemainingBill = Object.values(remainingCost).reduce((a, b) => a + b, 0);
-         grossClaim = totalRemainingBill;
+         basicBenefit = totalRemainingBill;
+         if (plan.overallAnnualLimit > 0) {
+            basicBenefit = Math.min(basicBenefit, plan.overallAnnualLimit);
+         }
       } else {
          // Itemized Logic
-         grossClaim += calculateItemClaim(remainingCost.room, plan.limitRoomAndBoard * selectedProcedure.days);
-         grossClaim += calculateItemClaim(remainingCost.surgeon, plan.limitSurgical);
-         grossClaim += calculateItemClaim(remainingCost.anaesthetist, plan.limitAnaesthetist);
-         grossClaim += calculateItemClaim(remainingCost.ot, plan.limitOperatingTheatre);
-         grossClaim += calculateItemClaim(remainingCost.misc, plan.limitMiscServices);
-         grossClaim += calculateItemClaim(remainingCost.specialist, plan.limitSpecialist);
+         const bRoom = calcBenefit(remainingCost.room, plan.limitRoomAndBoard * selectedProcedure.days);
+         const bSurgeon = calcBenefit(remainingCost.surgeon, plan.limitSurgical);
+         const bAnaesthetist = calcBenefit(remainingCost.anaesthetist, plan.limitAnaesthetist);
+         const bOT = calcBenefit(remainingCost.ot, plan.limitOperatingTheatre);
+         const bMisc = calcBenefit(remainingCost.misc, plan.limitMiscServices);
+         const bSpecialist = calcBenefit(remainingCost.specialist, plan.limitSpecialist);
+         
+         basicBenefit = bRoom + bSurgeon + bAnaesthetist + bOT + bMisc + bSpecialist;
       }
 
-      // 2. Apply Deductible (Simplified: Assuming annual deductible applies to this single case if not met)
-      // In real scenario, we'd check if deductible was met previously. Here we assume 0 used.
+      // SMM Logic
+      if (plan.smmEnabled) {
+         const totalRemainingBill = Object.values(remainingCost).reduce((a, b) => a + b, 0);
+         const shortfall = Math.max(0, totalRemainingBill - basicBenefit);
+         
+         if (shortfall > 0) {
+            // SMM pays % of the shortfall
+            let calculatedSMM = shortfall * (plan.smmReimbursementRate || 0.8);
+            
+            // Cap at SMM Annual Limit
+            if (plan.smmAnnualLimit && plan.smmAnnualLimit > 0) {
+               calculatedSMM = Math.min(calculatedSMM, plan.smmAnnualLimit);
+            }
+            
+            smmBenefit = calculatedSMM;
+         }
+      }
+
+      grossClaim = basicBenefit + smmBenefit;
+
+      // 2. Apply Deductible
       let netClaim = Math.max(0, grossClaim - plan.deductible);
       usedDeductible = grossClaim - netClaim;
 
-      // 3. Update Remaining Costs (Simplified for simulation visual only - logic is complex for multi-plan stacking item-by-item)
-      // For display simplicity, we just reduce total outstanding by net claim
+      // 3. Update Remaining Costs
+      // For simplicity in this multi-plan simulation, we reduce the total remaining bill proportionally
+      // In a real engine, we would track per-item remaining balance.
+      // Here we just assume the claim reduces the "Total Outstanding" for the next plan.
+      // To prevent double counting, we zero out the costs if fully covered, or reduce them.
+      // Simplified: We don't update `remainingCost` object deeply for the next plan in this UI demo,
+      // assuming usually 1 main plan or 1 Group + 1 Top-up (which is usually Full Cover).
+      
       totalClaim += netClaim;
       
       return {
         planName: plan.name,
         grossClaim,
+        basicBenefit,
+        smmBenefit,
         deductibleApplied: usedDeductible,
         netClaim
       };
@@ -463,9 +500,15 @@ export const InsuranceAnalysisView: React.FC<Props> = ({ data }) => {
                           
                           <div className="flex gap-8 text-right">
                              <div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">總索償額</p>
-                                <p className="font-bold text-slate-700">${res.grossClaim.toLocaleString()}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">基本保障</p>
+                                <p className="font-bold text-slate-700">${res.basicBenefit.toLocaleString()}</p>
                              </div>
+                             {res.smmBenefit > 0 && (
+                                <div>
+                                   <p className="text-[10px] text-indigo-400 font-bold uppercase">SMM 賠償</p>
+                                   <p className="font-bold text-indigo-600">+${res.smmBenefit.toLocaleString()}</p>
+                                </div>
+                             )}
                              <div>
                                 <p className="text-[10px] text-red-400 font-bold uppercase">已扣除自付費</p>
                                 <p className="font-bold text-red-600">-${res.deductibleApplied.toLocaleString()}</p>
